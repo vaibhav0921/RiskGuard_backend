@@ -23,7 +23,7 @@ public class EaStatus {
     private double  dailyLossPercent;
     private double  currentEquity;
     private String  disabledReason;
-    private boolean isEAConnected ;
+    private boolean eaConnected;
 
     // Updated every time EA posts
     private LocalDateTime lastUpdated;

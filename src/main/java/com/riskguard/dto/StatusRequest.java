@@ -14,5 +14,5 @@ public class StatusRequest {
     private double  dailyLossPercent;
     private double  currentEquity;
     private String  disabledReason;
-    private boolean isEAConnected;
+    private boolean eaConnected;
 }

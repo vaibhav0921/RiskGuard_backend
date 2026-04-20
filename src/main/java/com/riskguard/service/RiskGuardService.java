@@ -159,6 +159,7 @@ public class RiskGuardService {
         status.setCurrentEquity(req.getCurrentEquity());
         status.setDisabledReason(req.getDisabledReason());
         status.setLastUpdated(LocalDateTime.now());
+        status.setEaConnected(req.isLicenseActive());
         log.info("[Status] From EA {} / {} — trading={} losses={}" +
                         " trades={} dailyLoss={}%% equity={} reason={}",
                 status.getEmail(),
@@ -182,7 +183,7 @@ public class RiskGuardService {
         EaStatus status = statusRepo
                 .findByEmailAndAccountNumber(email, account)
                 .orElse(null);
-
+        log.info("statusRequest from frontend:  " + status);
         if (status == null) {
             // Return empty defaults if EA hasn't connected yet
             StatusRequest empty = new StatusRequest();
@@ -194,7 +195,7 @@ public class RiskGuardService {
             empty.setDailyLossPercent(0);
             empty.setConsecutiveLosses(0);
             empty.setDisabledReason("");
-            empty.setEAConnected(false);
+            empty.setEaConnected(false);
             return empty;
         }
 
@@ -208,7 +209,8 @@ public class RiskGuardService {
         res.setDailyLossPercent(status.getDailyLossPercent());
         res.setCurrentEquity(status.getCurrentEquity());
         res.setDisabledReason(status.getDisabledReason());
-        res.setEAConnected(status.isEAConnected()); // map field
+        res.setEaConnected(status.isLicenseActive());
+        // map field
         log.info("statusRequest from frontend:  " + res.toString());
         return res;
     }
