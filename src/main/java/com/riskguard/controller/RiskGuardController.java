@@ -1,11 +1,15 @@
 package com.riskguard.controller;
 
+import com.razorpay.Order;
+import com.razorpay.RazorpayClient;
+import com.razorpay.Utils;
 import com.riskguard.dto.*;
 import com.riskguard.service.RiskGuardService;
 import jakarta.annotation.PostConstruct;
 import jakarta.annotation.Resource;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.json.JSONObject;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.MediaType;
@@ -13,6 +17,7 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
 import java.io.IOException;
+import java.util.Map;
 
 @CrossOrigin(origins = "http://localhost:3002")
 @Slf4j
@@ -60,6 +65,46 @@ public class RiskGuardController {
         log.info("[API] GET /rules — email={} account={}",
                 email, account);
         return ResponseEntity.ok(service.getRules(email, account));
+    }
+
+    @PostMapping("/create-order")
+    public ResponseEntity<?> createOrder(@RequestBody Map<String, Object> data) throws Exception {
+
+        int amount = (int) data.get("amount"); // in paise
+
+        RazorpayClient client = new RazorpayClient("rzp_test_SfitmtfFH9SX9K", "2aeDNLvK9gxtNPhNfe7BCkZB");
+
+        JSONObject options = new JSONObject();
+        options.put("amount", amount);
+        options.put("currency", "INR");
+        options.put("receipt", "order_" + System.currentTimeMillis());
+
+        Order order = client.orders.create(options);
+
+        return ResponseEntity.ok(order.toString());
+    }
+
+
+    @PostMapping("/verify-payment")
+    public ResponseEntity<?> verifyPayment(@RequestBody Map<String, String> data) throws Exception {
+
+        String orderId = data.get("razorpay_order_id");
+        String paymentId = data.get("razorpay_payment_id");
+        String signature = data.get("razorpay_signature");
+
+        String payload = orderId + "|" + paymentId;
+
+        String expectedSignature = Utils.getHash(payload, "2aeDNLvK9gxtNPhNfe7BCkZB");
+
+        if (expectedSignature.equals(signature)) {
+
+            // ✅ PAYMENT SUCCESS → Activate subscription
+            // TODO: call your subscription logic here
+
+            return ResponseEntity.ok("Payment verified");
+        }
+
+        return ResponseEntity.status(400).body("Invalid payment");
     }
 
     //---------------------------------------------------------------
