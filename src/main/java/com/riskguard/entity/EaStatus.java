@@ -24,7 +24,7 @@ public class EaStatus {
     private double  currentEquity;
     private String  disabledReason;
     private boolean eaConnected;
-
+    private Double startOfDayEquity;
     // Updated every time EA posts
     private LocalDateTime lastUpdated;
 }

@@ -15,4 +15,5 @@ public class StatusRequest {
     private double  currentEquity;
     private String  disabledReason;
     private boolean eaConnected;
+    private Double startOfDayEquity;
 }

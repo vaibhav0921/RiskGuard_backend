@@ -19,11 +19,9 @@ public class SecurityConfig {
         http
                 .csrf(csrf -> csrf.disable())
                 .cors(cors -> {})
-
                 .headers(headers -> headers
-                        .frameOptions(frame -> frame.disable()) // ✅ REQUIRED for H2
+                        .frameOptions(frame -> frame.disable())
                 )
-
                 .authorizeHttpRequests(auth -> auth
                         .requestMatchers("/h2-console/**").permitAll()
                         .requestMatchers(HttpMethod.OPTIONS, "/**").permitAll()
@@ -33,13 +31,18 @@ public class SecurityConfig {
 
         return http.build();
     }
+
     @Bean
     public CorsConfigurationSource corsConfigurationSource() {
         CorsConfiguration configuration = new CorsConfiguration();
 
+        // FIX: Added 3002. Your controller has @CrossOrigin("3002") but
+        // SecurityConfig only allowed 3000 and 3001 — if your frontend
+        // runs on 3002 the preflight OPTIONS was being blocked here.
         configuration.setAllowedOrigins(List.of(
+                "http://localhost:3000",
                 "http://localhost:3001",
-                "http://localhost:3000"
+                "http://localhost:3002"
         ));
 
         configuration.setAllowedMethods(List.of(
