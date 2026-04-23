@@ -136,7 +136,7 @@ public class RiskGuardController {
 
     @GetMapping("/download/RiskGuard.ex5")
     public ResponseEntity<Resource> downloadEA() throws IOException {
-        Resource file = (Resource) new ClassPathResource("static/RiskGuard.ex5");
+        Resource file = (Resource) new ClassPathResource("static/risk_app.ex5");
         return ResponseEntity.ok()
                 .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=RiskGuard.ex5")
                 .contentType(MediaType.APPLICATION_OCTET_STREAM)

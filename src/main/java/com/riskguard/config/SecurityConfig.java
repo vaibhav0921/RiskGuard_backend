@@ -58,6 +58,7 @@ public class SecurityConfig {
         ));
 
         configuration.setAllowedHeaders(List.of("*"));
+        configuration.setExposedHeaders(List.of("Content-Disposition"));
         configuration.setAllowCredentials(true);
         configuration.setAllowedOrigins(origins);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
