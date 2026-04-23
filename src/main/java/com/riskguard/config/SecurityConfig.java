@@ -1,5 +1,7 @@
 package com.riskguard.config;
 
+
+import org.springframework.beans.factory.annotation.Value;
 import org.springframework.context.annotation.Bean;
 import org.springframework.context.annotation.Configuration;
 import org.springframework.http.HttpMethod;
@@ -9,10 +11,17 @@ import org.springframework.web.cors.CorsConfiguration;
 import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 @Configuration
 public class SecurityConfig {
+
+
+
+    @Value("${ALLOWED_ORIGINS:http://localhost:3000,http://localhost:3001,http://localhost:3002}")
+    private String allowedOriginsRaw;
 
     @Bean
     public SecurityFilterChain securityFilterChain(HttpSecurity http) throws Exception {
@@ -39,11 +48,10 @@ public class SecurityConfig {
         // FIX: Added 3002. Your controller has @CrossOrigin("3002") but
         // SecurityConfig only allowed 3000 and 3001 — if your frontend
         // runs on 3002 the preflight OPTIONS was being blocked here.
-        configuration.setAllowedOrigins(List.of(
-                "http://localhost:3000",
-                "http://localhost:3001",
-                "http://localhost:3002"
-        ));
+        List<String> origins = Arrays.stream(allowedOriginsRaw.split(","))
+                .map(String::trim)
+                .filter(s -> !s.isEmpty())
+                .collect(Collectors.toList());
 
         configuration.setAllowedMethods(List.of(
                 "GET", "POST", "PUT", "DELETE", "OPTIONS"
@@ -51,7 +59,7 @@ public class SecurityConfig {
 
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setAllowCredentials(true);
-
+        configuration.setAllowedOrigins(origins);
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 

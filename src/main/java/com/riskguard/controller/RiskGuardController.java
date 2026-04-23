@@ -19,7 +19,7 @@ import org.springframework.web.bind.annotation.*;
 import java.io.IOException;
 import java.util.Map;
 
-@CrossOrigin(origins = "http://localhost:3002")
+
 @Slf4j
 @RestController
 @RequestMapping("/api")
