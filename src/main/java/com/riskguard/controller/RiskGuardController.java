@@ -6,12 +6,14 @@ import com.razorpay.Utils;
 import com.riskguard.dto.*;
 import com.riskguard.service.RiskGuardService;
 import jakarta.annotation.PostConstruct;
-import jakarta.annotation.Resource;
+import org.springframework.core.io.Resource;
+import org.springframework.core.io.ClassPathResource;;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.json.JSONObject;
 import org.springframework.core.io.ClassPathResource;
 import org.springframework.http.HttpHeaders;
+import org.springframework.http.HttpStatus;
 import org.springframework.http.MediaType;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -135,12 +137,29 @@ public class RiskGuardController {
     }
 
     @GetMapping("/download/RiskGuard.ex5")
-    public ResponseEntity<Resource> downloadEA() throws IOException {
-        Resource file = (Resource) new ClassPathResource("static/risk_app.ex5");
-        return ResponseEntity.ok()
-                .header(HttpHeaders.CONTENT_DISPOSITION, "attachment; filename=RiskGuard.ex5")
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .body(file);
+    public ResponseEntity<byte[]> downloadEA() {
+        try {
+            ClassPathResource resource = new ClassPathResource("static/risk_app.ex5");
+
+            if (!resource.exists()) {
+                log.error("[Download] risk_app.ex5 not found");
+                return ResponseEntity.notFound().build();
+            }
+
+            byte[] fileBytes = resource.getInputStream().readAllBytes();
+
+            HttpHeaders headers = new HttpHeaders();
+            headers.setContentType(MediaType.APPLICATION_OCTET_STREAM);
+            headers.setContentDispositionFormData("attachment", "risk_app.ex5");
+            headers.setContentLength(fileBytes.length);
+
+            log.info("[Download] Serving RiskGuard.ex5 ({} bytes)", fileBytes.length);
+            return new ResponseEntity<>(fileBytes, headers, HttpStatus.OK);
+
+        } catch (IOException e) {
+            log.error("[Download] Failed to read EA file: {}", e.getMessage());
+            return ResponseEntity.internalServerError().build();
+        }
     }
 
     // Add this endpoint to RiskGuardController.java
