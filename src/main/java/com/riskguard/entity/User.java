@@ -3,6 +3,7 @@ package com.riskguard.entity;
 import jakarta.persistence.*;
 import lombok.Data;
 import java.time.LocalDate;
+import java.time.LocalDateTime;
 
 @Entity
 @Table(name = "users")
@@ -27,5 +28,12 @@ public class User {
     @Column(nullable = false)
     private String plan = "FREE";
 
+    @Column
+    private String paymentReference;
+
     private LocalDate expiryDate;
+
+    @Column
+    private LocalDateTime createdAt = LocalDateTime.now();
+
 }

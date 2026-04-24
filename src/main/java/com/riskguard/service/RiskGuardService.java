@@ -3,6 +3,7 @@ package com.riskguard.service;
 import com.riskguard.dto.*;
 import com.riskguard.entity.*;
 import com.riskguard.repository.*;
+import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
@@ -23,36 +24,75 @@ public class RiskGuardService {
     // VALIDATE LICENSE
     //---------------------------------------------------------------
     public ValidateResponse validate(String email, String account) {
-        Optional<User> opt = userRepo
+
+        // Case 1 — Exact match found
+        Optional<User> exactMatch = userRepo
                 .findByEmailAndAccountNumber(email, account);
 
-        if (opt.isEmpty()) {
-            log.warn("[Validate] User not found: {} / {}", email, account);
-            return new ValidateResponse(false, "NONE", "User not found", null);
+        if (exactMatch.isPresent()) {
+            User user = exactMatch.get();
+
+            boolean active = "ACTIVE".equalsIgnoreCase(
+                    user.getSubscriptionStatus());
+
+            // Auto expire
+            if (active && user.getExpiryDate() != null
+                    && user.getExpiryDate().isBefore(LocalDate.now())) {
+                active = false;
+                user.setSubscriptionStatus("EXPIRED");
+                userRepo.save(user);
+                log.info("[Validate] Expired: {} / {}", email, account);
+            }
+
+            String expiry = user.getExpiryDate() != null
+                    ? user.getExpiryDate().toString() : null;
+
+            log.info("[Validate] {} / {} → active={} plan={}",
+                    email, account, active, user.getPlan());
+
+            return new ValidateResponse(
+                    active,
+                    user.getPlan(),
+                    active ? "Subscription valid"
+                            : "Subscription inactive or expired",
+                    expiry
+            );
         }
 
-        User user = opt.get();
-
-        boolean active = "ACTIVE".equalsIgnoreCase(user.getSubscriptionStatus());
-
-        if (active && user.getExpiryDate() != null
-                && user.getExpiryDate().isBefore(LocalDate.now())) {
-            active = false;
-            log.info("[Validate] Subscription expired for: {}", email);
+        // Case 2 — This MT5 account belongs to a different email
+        // One MT5 account can only have ONE owner
+        Optional<User> accountTaken = userRepo.findByAccountNumber(account);
+        if (accountTaken.isPresent()) {
+            log.warn("[Validate] Account {} already owned by different email",
+                    account);
+            return new ValidateResponse(
+                    false, "NONE",
+                    "This MT5 account number is already registered " +
+                            "with a different email address.",
+                    null
+            );
         }
 
-        String expiryDateStr = user.getExpiryDate() != null
-                ? user.getExpiryDate().toString()
-                : null;
+        // Case 3 — Email exists but this account is not registered yet
+        // Same user with a new/different MT5 account — send to plans
+        Optional<User> emailExists = userRepo.findByEmail(email);
+        if (emailExists.isPresent()) {
+            log.info("[Validate] Known email {} with new account {} → plans",
+                    email, account);
+            return new ValidateResponse(
+                    false, "NEW_ACCOUNT",
+                    "This MT5 account is not registered yet. " +
+                            "Please subscribe to activate it.",
+                    null
+            );
+        }
 
-        log.info("[Validate] {} / {} → active={} plan={}",
-                email, account, active, user.getPlan());
-
+        // Case 4 — Completely new user
+        log.info("[Validate] New user {} / {} → plans", email, account);
         return new ValidateResponse(
-                active,
-                user.getPlan(),
-                active ? "Subscription valid" : "Subscription inactive or expired",
-                expiryDateStr
+                false, "NONE",
+                "No account found. Please complete payment to register.",
+                null
         );
     }
 
@@ -231,18 +271,29 @@ public class RiskGuardService {
     //---------------------------------------------------------------
     // REGISTER USER AFTER PAYMENT
     //---------------------------------------------------------------
+    @Transactional
     public ValidateResponse register(RegisterRequest req) {
         String email   = req.getEmail();
         String account = req.getAccountNumber();
         String plan    = req.getPlan() != null
                 ? req.getPlan().toUpperCase() : "BASIC";
 
-        int months;
-        switch (plan) {
-            case "PRO":      months = 2; break;
-            case "ADVANCED": months = 6; break;
-            default:         months = 1; break;
+        // Block only if MT5 account is taken by a DIFFERENT email
+        Optional<User> accountTaken = userRepo.findByAccountNumber(account);
+        if (accountTaken.isPresent() &&
+                !accountTaken.get().getEmail().equalsIgnoreCase(email)) {
+            log.warn("[Register] Account {} already owned by {}",
+                    account, accountTaken.get().getEmail());
+            throw new RuntimeException(
+                    "This MT5 account is already registered with a different email.");
         }
+
+        // Same email + same account = renewal or upgrade, allow it
+        int months = switch (plan) {
+            case "PRO"      -> 2;
+            case "ADVANCED" -> 6;
+            default         -> 1;
+        };
 
         User user = userRepo
                 .findByEmailAndAccountNumber(email, account)
@@ -253,8 +304,12 @@ public class RiskGuardService {
         user.setSubscriptionStatus("ACTIVE");
         user.setPlan(plan);
         user.setExpiryDate(LocalDate.now().plusMonths(months));
+        user.setPaymentReference(req.getPaymentRef());
+        if (user.getCreatedAt() == null)
+            user.setCreatedAt(LocalDateTime.now());
         userRepo.save(user);
 
+        // Create default rules for this account if not exist
         if (rulesRepo.findByEmailAndAccountNumber(email, account).isEmpty()) {
             RiskRules rules = new RiskRules();
             rules.setEmail(email);
@@ -265,12 +320,11 @@ public class RiskGuardService {
             rulesRepo.save(rules);
         }
 
-        log.info("[Register] User created/updated: {} / {} plan={} expiry={}",
+        log.info("[Register] {} / {} plan={} expiry={}",
                 email, account, plan, user.getExpiryDate());
 
         return new ValidateResponse(
-                true,
-                plan,
+                true, plan,
                 "Account activated successfully",
                 user.getExpiryDate().toString()
         );
