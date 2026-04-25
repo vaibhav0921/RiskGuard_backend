@@ -10,6 +10,7 @@ import org.springframework.beans.factory.annotation.Autowired;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
+import java.util.List;
 import java.util.Optional;
 
 @Slf4j
@@ -75,7 +76,7 @@ public class RiskGuardService {
 
         // Case 3 — Email exists but this account is not registered yet
         // Same user with a new/different MT5 account — send to plans
-        Optional<User> emailExists = userRepo.findByEmail(email);
+        Optional<List<User>> emailExists = userRepo.findByEmail(email);
         if (emailExists.isPresent()) {
             log.info("[Validate] Known email {} with new account {} → plans",
                     email, account);

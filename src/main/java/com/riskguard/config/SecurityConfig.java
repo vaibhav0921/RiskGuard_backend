@@ -12,6 +12,7 @@ import org.springframework.web.cors.CorsConfigurationSource;
 import org.springframework.web.cors.UrlBasedCorsConfigurationSource;
 
 import java.util.Arrays;
+import java.util.Collections;
 import java.util.List;
 import java.util.stream.Collectors;
 
@@ -20,7 +21,7 @@ public class SecurityConfig {
 
 
 
-    @Value("${ALLOWED_ORIGINS}")
+    @Value("http://localhost:3000")
     private String allowedOriginsRaw;
 
     @Bean
@@ -60,7 +61,7 @@ public class SecurityConfig {
         configuration.setAllowedHeaders(List.of("*"));
         configuration.setExposedHeaders(List.of("Content-Disposition"));
         configuration.setAllowCredentials(true);
-        configuration.setAllowedOrigins(origins);
+        configuration.setAllowedOrigins(Collections.singletonList("http://localhost:3000"));
         UrlBasedCorsConfigurationSource source = new UrlBasedCorsConfigurationSource();
         source.registerCorsConfiguration("/**", configuration);
 
