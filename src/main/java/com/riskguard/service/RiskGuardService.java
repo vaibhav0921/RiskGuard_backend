@@ -202,8 +202,10 @@ public class RiskGuardService {
         // Old code: status.setEaConnected(req.isLicenseActive())
         // That would mark EA as connected even if equity=0 (EA just started,
         // no real data yet), causing dashboard to show 0 values as "Active".
-        boolean hasRealData = req.getCurrentEquity() > 0;
-        status.setEaConnected(hasRealData);
+//        boolean hasRealData = req.getCurrentEquity() > 0;
+//        status.setEaConnected(hasRealData);
+
+        status.setEaConnected(req.isLicenseActive());
 
         statusRepo.save(status);
 
@@ -259,7 +261,10 @@ public class RiskGuardService {
         res.setStartOfDayEquity(status.getStartOfDayEquity());
 
         // FIX 2 (read side): use stored eaConnected flag, not licenseActive.
-        res.setEaConnected(status.isEaConnected());
+//        res.setEaConnected(status.isEaConnected());
+
+        boolean connected = status.isEaConnected() || status.isLicenseActive();
+        res.setEaConnected(connected);
 
         log.info("[Status] Returned to frontend — equity={} startOfDay={} eaConnected={}",
                 res.getCurrentEquity(),
