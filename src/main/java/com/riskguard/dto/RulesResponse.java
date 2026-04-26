@@ -10,4 +10,5 @@ public class RulesResponse {
     private double maxDailyLoss;
     private int    maxTrades;
     private int    maxLossStreak;
+    private String resetTime;
 }

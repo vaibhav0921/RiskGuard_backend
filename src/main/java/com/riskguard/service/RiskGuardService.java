@@ -7,6 +7,7 @@ import jakarta.transaction.Transactional;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.beans.factory.annotation.Autowired;
+import org.springframework.scheduling.annotation.Scheduled;
 import org.springframework.stereotype.Service;
 import java.time.LocalDate;
 import java.time.LocalDateTime;
@@ -106,7 +107,7 @@ public class RiskGuardService {
 
         if (opt.isEmpty()) {
             log.info("[Rules] No rules found for {} — using defaults", email);
-            return new RulesResponse(3.0, 5, 2);
+            return new RulesResponse(3.0, 5, 2,"21:30");
         }
 
         RiskRules rules = opt.get();
@@ -117,7 +118,8 @@ public class RiskGuardService {
         return new RulesResponse(
                 rules.getMaxDailyLoss(),
                 rules.getMaxTrades(),
-                rules.getMaxLossStreak());
+                rules.getMaxLossStreak(),
+                rules.getResetTime());
     }
 
     //---------------------------------------------------------------
@@ -135,6 +137,7 @@ public class RiskGuardService {
         rules.setMaxDailyLoss(req.getMaxDailyLoss());
         rules.setMaxTrades(req.getMaxTrades());
         rules.setMaxLossStreak(req.getMaxLossStreak());
+        rules.setResetTime("21:30");
 
         rulesRepo.save(rules);
         log.info("[Rules] Updated for {} / {}", email, account);

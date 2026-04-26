@@ -21,4 +21,5 @@ public class RiskRules {
     private double maxDailyLoss   = 3.0;   // percent
     private int    maxTrades      = 5;
     private int    maxLossStreak  = 2;
+    private String resetTime ="21:30";
 }
