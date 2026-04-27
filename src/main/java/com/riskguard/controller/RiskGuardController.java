@@ -96,7 +96,7 @@ public class RiskGuardController {
 
         String payload = orderId + "|" + paymentId;
 
-        String expectedSignature = Utils.getHash(payload, "2aeDNLvK9gxtNPhNfe7BCkZB");
+        String expectedSignature = Utils.getHash(payload, "TgNiP5raff61sSwNyo3nYPa7");
 
         if (expectedSignature.equals(signature)) {
 
