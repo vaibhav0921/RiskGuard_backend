@@ -28,6 +28,12 @@ public class User {
     @Column(nullable = false)
     private String plan = "FREE";
 
+    @Column(name = "trial_used")
+    private Boolean trialUsed = false;
+
+    public Boolean getTrialUsed() { return trialUsed; }
+    public void setTrialUsed(Boolean trialUsed) { this.trialUsed = trialUsed; }
+
     @Column
     private String paymentReference;
 
