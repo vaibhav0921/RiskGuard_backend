@@ -7,6 +7,7 @@ import lombok.Data;
 public class RegisterRequest {
     private String email;
     private String accountNumber;
-    private String plan;          // BASIC, PRO, ADVANCED
-    private String paymentRef;    // payment reference / transaction ID
+    private String plan;
+    private String paymentRef;
+    private String referralCode;  // NEW
 }
