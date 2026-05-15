@@ -20,7 +20,7 @@ public class SecurityConfig {
 
 
 
-    @Value("${ALLOWED_ORIGINS}")
+    @Value("http://localhost:3001")
     private String allowedOriginsRaw;
 
     @Bean

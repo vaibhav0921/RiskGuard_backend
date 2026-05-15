@@ -19,9 +19,10 @@ import java.util.Optional;
 @RequiredArgsConstructor
 public class RiskGuardService {
 
-    private final UserRepository      userRepo;
+    private final UserRepository userRepo;
     private final RiskRulesRepository rulesRepo;
-
+    @Autowired
+    private AffiliateService affiliateService;
     //---------------------------------------------------------------
     // VALIDATE LICENSE
     //---------------------------------------------------------------
@@ -107,7 +108,7 @@ public class RiskGuardService {
 
         if (opt.isEmpty()) {
             log.info("[Rules] No rules found for {} — using defaults", email);
-            return new RulesResponse(3.0, 5, 2,"21:30");
+            return new RulesResponse(3.0, 5, 2, "21:30");
         }
 
         RiskRules rules = opt.get();
@@ -280,62 +281,54 @@ public class RiskGuardService {
     //---------------------------------------------------------------
     // REGISTER USER AFTER PAYMENT
     //---------------------------------------------------------------
+    // Add to RiskGuardService fields:
+
+
+    // Update the register method — add referralCode param to RegisterRequest first, then:
     @Transactional
     public ValidateResponse register(RegisterRequest req) {
         String email   = req.getEmail();
         String account = req.getAccountNumber();
-        String plan    = req.getPlan() != null
-                ? req.getPlan().toUpperCase() : "BASIC";
+        String plan    = req.getPlan() != null ? req.getPlan().toUpperCase() : "BASIC";
 
-        // Block only if MT5 account is taken by a DIFFERENT email
         Optional<User> accountTaken = userRepo.findByAccountNumber(account);
-        if (accountTaken.isPresent() &&
-                !accountTaken.get().getEmail().equalsIgnoreCase(email)) {
-            log.warn("[Register] Account {} already owned by {}",
-                    account, accountTaken.get().getEmail());
-            throw new RuntimeException(
-                    "This MT5 account is already registered with a different email.");
+        if (accountTaken.isPresent() && !accountTaken.get().getEmail().equalsIgnoreCase(email)) {
+            throw new RuntimeException("This MT5 account is already registered with a different email.");
         }
 
-        // Same email + same account = renewal or upgrade, allow it
         int months = switch (plan) {
             case "PRO"      -> 2;
             case "ADVANCED" -> 6;
             default         -> 1;
         };
 
-        User user = userRepo
-                .findByEmailAndAccountNumber(email, account)
-                .orElse(new User());
-
+        User user = userRepo.findByEmailAndAccountNumber(email, account).orElse(new User());
         user.setEmail(email);
         user.setAccountNumber(account);
         user.setSubscriptionStatus("ACTIVE");
         user.setPlan(plan);
         user.setExpiryDate(LocalDate.now().plusMonths(months));
         user.setPaymentReference(req.getPaymentRef());
-        if (user.getCreatedAt() == null)
-            user.setCreatedAt(LocalDateTime.now());
+        if (user.getCreatedAt() == null) user.setCreatedAt(LocalDateTime.now());
         userRepo.save(user);
 
-        // Create default rules for this account if not exist
         if (rulesRepo.findByEmailAndAccountNumber(email, account).isEmpty()) {
             RiskRules rules = new RiskRules();
-            rules.setEmail(email);
-            rules.setAccountNumber(account);
-            rules.setMaxDailyLoss(3.0);
-            rules.setMaxTrades(5);
-            rules.setMaxLossStreak(2);
+            rules.setEmail(email); rules.setAccountNumber(account);
+            rules.setMaxDailyLoss(3.0); rules.setMaxTrades(5); rules.setMaxLossStreak(2);
             rulesRepo.save(rules);
         }
 
-        log.info("[Register] {} / {} plan={} expiry={}",
-                email, account, plan, user.getExpiryDate());
+        // Process affiliate commission if referral code present
+        if (req.getReferralCode() != null && !req.getReferralCode().isBlank()) {
+            try {
+                affiliateService.recordConversion(req.getReferralCode(), email, plan);
+            } catch (Exception e) {
+                log.warn("[Register] Affiliate commission error: {}", e.getMessage());
+            }
+        }
 
-        return new ValidateResponse(
-                true, plan,
-                "Account activated successfully",
-                user.getExpiryDate().toString()
-        );
+        log.info("[Register] {} / {} plan={} expiry={}", email, account, plan, user.getExpiryDate());
+        return new ValidateResponse(true, plan, "Account activated successfully", user.getExpiryDate().toString());
     }
 }
