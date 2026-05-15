@@ -20,7 +20,7 @@ public class AffiliateController {
 
     private final AffiliateService affiliateService;
 
-    private static final String FRONTEND_URL = "http://localhost:3001";
+    private static final String FRONTEND_URL = "https://riskguard-app.onrender.com";
     @PostMapping("/join")
     public ResponseEntity<?> join(@RequestBody Map<String, String> body) {
         String email = body.get("email");
